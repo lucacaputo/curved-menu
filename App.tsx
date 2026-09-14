@@ -8,7 +8,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <GestureHandlerRootView>
-        <Menu />
+        <Menu items={["Home", "Profile", "Settings"]} />
         <SafeAreaView style={styles.container}></SafeAreaView>
         <StatusBar style="auto" />
       </GestureHandlerRootView>
