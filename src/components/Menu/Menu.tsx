@@ -2,25 +2,38 @@ import {
   Blur,
   Canvas,
   Group,
-  matchFont,
   Paint,
   Path,
   Skia,
   SkPoint,
-  Text,
 } from "@shopify/react-native-skia";
-import { useMemo } from "react";
-import { Platform, useWindowDimensions } from "react-native";
-import { GestureDetector, usePanGesture } from "react-native-gesture-handler";
+import { useState } from "react";
 import {
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
+import { GestureDetector, usePanGesture } from "react-native-gesture-handler";
+import Animated, {
   cancelAnimation,
   clamp,
+  FadeInLeft,
+  FadeOutLeft,
   useAnimatedReaction,
   useDerivedValue,
   useSharedValue,
   withSpring,
   withTiming,
 } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { scheduleOnRN } from "react-native-worklets";
+import {
+  Lucide,
+  type LucideIconName,
+} from "@react-native-vector-icons/lucide/static";
 
 const DRAWER_WIDTH_RATIO = 3 / 4;
 const MENU_COLOR = "teal";
@@ -29,14 +42,11 @@ const DRAG_CLAMP = 10;
 const SWIPE_THRESHOLD = 100;
 const TAP_DURATION_MS = 130;
 
-const FONT_SIZE = 16;
-const LINE_HEIGHT = 24; // vertical distance between item baselines
-const ITEMS_TOP_PADDING = 60; // baseline of the first item
-const ITEMS_LEFT_PADDING = 16;
-const LABEL_COLOR = "white";
-
 type MenuProps = {
-  items: string[];
+  items: {
+    label: string;
+    iconName: LucideIconName;
+  }[];
 };
 
 const Menu = ({ items }: MenuProps) => {
@@ -61,6 +71,8 @@ const Menu = ({ items }: MenuProps) => {
     "worklet";
     return open ? { x: drawerWidth, y: height / 2 } : { x: 0, y: 0 };
   };
+  const [isActive, setIsActive] = useState(false);
+  const { top: topInset } = useSafeAreaInsets();
 
   useAnimatedReaction(
     () => isMenuOpen.value,
@@ -68,6 +80,7 @@ const Menu = ({ items }: MenuProps) => {
       startPoint.set(withSpring(startTarget(open)));
       endPoint.set(withSpring(endTarget(open)));
       controlPointPos.set(withSpring(controlTarget(open)));
+      scheduleOnRN(setIsActive, open);
     },
   );
 
@@ -106,21 +119,6 @@ const Menu = ({ items }: MenuProps) => {
     },
   });
 
-  const font = useMemo(
-    () =>
-      matchFont({
-        fontFamily: Platform.select({
-          ios: "Helvetica",
-          android: "sans-serif",
-          default: "sans-serif",
-        }),
-        fontSize: FONT_SIZE,
-        fontStyle: "normal",
-        fontWeight: "normal",
-      }),
-    [],
-  );
-
   const animatedPath = useDerivedValue(() => {
     const path = Skia.PathBuilder.Make();
     path.moveTo(startPoint.get().x, startPoint.get().y);
@@ -137,7 +135,37 @@ const Menu = ({ items }: MenuProps) => {
 
   return (
     <GestureDetector gesture={pan}>
-      <Canvas style={{ width, height }}>
+      <View style={styles.edgeStrip} />
+      {isActive && (
+        <View
+          style={[
+            styles.items,
+            { paddingVertical: topInset, width: width * 0.3 },
+          ]}
+        >
+          {items.map((item, idx) => (
+            <Animated.View
+              entering={FadeInLeft.delay(idx * 100)}
+              exiting={FadeOutLeft}
+              key={item.label}
+              style={styles.item}
+            >
+              <Pressable
+                style={styles.itemContent}
+                onPress={() => Alert.alert("Hi")}
+              >
+                <Text style={styles.label}>{item.label}</Text>
+                <Text>
+                  <Lucide name={item.iconName} color="white" />
+                </Text>
+              </Pressable>
+            </Animated.View>
+          ))}
+        </View>
+      )}
+      <Canvas
+        style={{ width, height, pointerEvents: isActive ? "auto" : "none" }}
+      >
         <Group
           layer={
             <Paint>
@@ -148,21 +176,36 @@ const Menu = ({ items }: MenuProps) => {
           <Path path={animatedPath} style="fill" color={MENU_COLOR} />
         </Group>
         <Path path={animatedPath} style="fill" color={MENU_COLOR} />
-        <Group clip={animatedPath}>
-          {items.map((item, idx) => (
-            <Text
-              key={item}
-              text={item}
-              font={font}
-              x={ITEMS_LEFT_PADDING}
-              y={ITEMS_TOP_PADDING + LINE_HEIGHT * idx}
-              color={LABEL_COLOR}
-            />
-          ))}
-        </Group>
       </Canvas>
     </GestureDetector>
   );
 };
+
+const styles = StyleSheet.create({
+  edgeStrip: {
+    position: "absolute",
+    height: "100%",
+    width: 30,
+    zIndex: 10,
+  },
+  items: {
+    position: "absolute",
+    paddingLeft: 16,
+    zIndex: 2,
+    height: "100%",
+    gap: 16,
+  },
+  item: {
+    width: "100%",
+  },
+  itemContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  label: {
+    color: "white",
+  },
+});
 
 export default Menu;

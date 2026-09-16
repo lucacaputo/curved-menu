@@ -1,24 +1,21 @@
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import Menu from "@components/Menu";
 
 export default function App() {
   return (
     <SafeAreaProvider>
       <GestureHandlerRootView>
-        <Menu items={["Home", "Profile", "Settings"]} />
-        <SafeAreaView style={styles.container}></SafeAreaView>
+        <Menu
+          items={[
+            { iconName: "house", label: "Home" },
+            { iconName: "person-standing", label: "Profile" },
+            { iconName: "cog", label: "Settings" },
+          ]}
+        />
         <StatusBar style="auto" />
       </GestureHandlerRootView>
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-});
